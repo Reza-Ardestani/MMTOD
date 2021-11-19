@@ -1,2 +1,2 @@
-# Chatbot---undergraduate-project
-Undergraduate primarily research-based project for chatbot
+# Chatbot---undergraduate-thesis-based-project
+Undergraduate thesis based project for chatbot
