@@ -1,1 +1,3 @@
-import img_handler
+from img_handler import *
+
+print(imgs_url_get())
