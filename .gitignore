@@ -3,6 +3,7 @@ code/img_handler/downloads/google_custom_result
 
 # ignore private_key file!
 code/img_handler/private_keys.py
+code/private_keys.py
 
 
 .venv/
