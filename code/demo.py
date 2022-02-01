@@ -351,14 +351,16 @@ if __name__ == '__main__':
 
 
         venuename = get_venuename(action_text)
-        print('\nVenuename:\n', venuename)
+        print('\nVenuename:\n',venuename )
+
         open_spans = get_open_span(action_text)
         print('\open_spans:\n', open_spans)
 
 
         # handling images
 
-        print(img_handler_obj.get_imgs_url(query = 'bread street kitchen in Singapore' , num_of_img = 5))
+        if venuename:
+            print(img_handler_obj.get_imgs_url(query = venuename +"in Singapore" , num_of_img = 5))
 
         # end of image handling
 
