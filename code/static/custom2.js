@@ -15,6 +15,20 @@ function submit_message(message) {
     		</div>
         `)
         
+        if (data.has_image == 'True') {
+          // append a row to the table
+          $('.card-body').append(`
+          <div class="d-flex justify-content-start mb-4">
+        <div class="img_cont_msg">
+        <img src="/static/bot-icon.jpg" class="rounded-circle user_img_msg">
+      </div>
+        <div class="msg_cotainer">
+        <img src=${data.image} width="400">
+          <span class="msg_time">8:40 AM, Today</span>
+      </div>
+      </div>
+      `)
+      }
         // remove the loading indicator
         $( "#loading" ).remove();
     }
