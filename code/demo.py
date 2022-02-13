@@ -161,7 +161,7 @@ if __name__ == '__main__':
 
     #sys.stdout.flush()
 
-    model_checkpoint = "./output/gpt2/checkpoint-108420"
+    model_checkpoint = "./output/checkpoint-108420"
 
     decoding = "DECODING METHOD HERE"
 

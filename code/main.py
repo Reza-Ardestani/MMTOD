@@ -30,7 +30,7 @@ domain_queue = []
 
 # sys.stdout.flush()
 
-model_checkpoint = "./output/gpt2/checkpoint-108420"
+model_checkpoint = "./output/checkpoint-108420"
 
 decoding = "DECODING METHOD HERE"
 
@@ -156,7 +156,7 @@ def get_action_new(sent):
 
 
 
-def get_response_new(sent):
+def get_response_new(sent, venuename):
     if '<|response|>' in sent:
         tmp = sent.split('<|belief|>')[-1].split('<|action|>')[-1].split('<|response|>')[-1]
     else:
@@ -182,6 +182,7 @@ def get_response_new(sent):
         new_tokens.append(tok)
     # ipdb.set_trace()
     response = tokenizer.decode(new_tokens).strip(' ,.')
+    response = response.replace('[venuename]', '{}'.format(venuename))
     return response
 
 
@@ -248,6 +249,7 @@ def Create_message(message):
     result = session['result']
     result['response'] = ''
     result['status'] = 'on'
+    result['has_image'] = 'False'
 
     raw_text = message
     input_text = raw_text.replace('you> ', '')
@@ -338,22 +340,28 @@ def Create_message(message):
 
     action_text = get_action_new(predicted_text)
     print('\naction_text:\n', action_text)
-    response_text = get_response_new(predicted_text)
-    print('\nresponse_text:\n', response_text)
-    #print(predicted_text)
 
     venuename = get_venuename(action_text)
     #print('\nVenuename:\n', venuename)
 
+    response_text = get_response_new(predicted_text, venuename)
+    print('\nresponse_text:\n', response_text)
+    #print(predicted_text)
+
+
+
     open_spans = get_open_span(action_text)
-    #print('\open_spans:\n', open_spans)
+    print('\open_spans:\n', open_spans)
 
     # handling images
 
-    #if venuename:
-    #   print(img_handler_obj.get_imgs_url(query=venuename + "in Singapore", num_of_img=5))
+    if venuename:
+        result['has_image'] = 'True'
+        images = img_handler_obj.get_imgs_url(query=venuename + "in Singapore", num_of_img=5)
+        result['image'] = images[0]
+        print(images)
 
-    delex_system = '<|system|> {}'.format(response_text)
+    delex_system = '{}'.format(response_text)
     context = context + ' ' + delex_system
 
     turn += 1
