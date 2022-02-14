@@ -1,10 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session
-import os
-import pickle
 import datetime
 import time
-import pandas as pd
-import numpy as np
 import random
 import logging
 
@@ -17,29 +13,25 @@ import pprint
 import numpy as np
 import torch
 from image_handler import Handler
-
-img_handler_obj = Handler()
 # args = ArgsParser().parse()
-
 # device = "cuda" if torch.cuda.is_available() else "cpu"
 # n_gpu = 0 if args.no_cuda else torch.cuda.device_count()
 
+img_handler_obj = Handler()
 pp = pprint.PrettyPrinter(indent=4)
 prev_beliefs = {}
 domain_queue = []
-
 # sys.stdout.flush()
-
 model_checkpoint = "./output/checkpoint-108420"
-
 decoding = "DECODING METHOD HERE"
-
 ## if decoding == 'nucleus':
 ##     TOP_P = float(sys.argv[3])
-
 delay = 0.5
-
-## multiwoz_db = MultiWozDB()
+context = ''
+input_text = ''
+turn = 0
+end_of_chat = 0
+survey_result = ''
 
 print('\nLoading Model', end="")
 
@@ -62,16 +54,6 @@ if 'openai-gpt' in model_checkpoint:
     tokenizer.add_special_tokens({'bos_token': '<|endoftext|>'})
     tokenizer.add_special_tokens({'eos_token': '<|endoftext|>'})
 
-sample = 1
-#print()
-#print('\n What would you like to ask?')
-# history = []
-context = ''
-input_text = ''
-turn = 0
-
-
-# dbmatch = 0
 
 def get_belief_new_dbsearch(sent):
     if '<|belief|>' in sent:
@@ -213,48 +195,31 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = 'MY_SECRET_KEY'
 
-
-def label_Message(message):
-    logging.warning('In label_Message')
-    # load the model from disk
-    model_filename = 'model/model.pkl'
-    tfidf_filename = 'model/tfidf.pkl'
-       
-    model = pickle.load(open(model_filename, 'rb'))
-    tfidf = pickle.load(open(tfidf_filename, 'rb'))
-     
-    pred = model.predict(tfidf.transform([message]))
-    message_label = pred[0]
-    
-    
-    logging.warning('Out label_Message')
-    return message_label
-
-def label_to_persian(label):
-    res = ''
-    if label == 'HAPPY':
-        res = 'خوشحال'
-    elif label == 'SAD':
-        res = 'ناراحت'
-
-    return
-
 def Create_message(message):
     global context
     global turn
+    global end_of_chat
     logging.warning('In create message')
     global result
     label = session['label']
     state = session['state']
     result = session['result']
+    result['turn_id'] = str(turn)
+    result['Generated_belief'] = ''
     result['response'] = ''
     result['status'] = 'on'
     result['has_image'] = 'False'
 
     raw_text = message
     input_text = raw_text.replace('you> ', '')
+    if end_of_chat > 0:
+        end_of_chat +=1
+        print(f'value of end_of_chat is {end_of_chat}')
+        return ''
     if input_text in ['q', 'quit']:
-        return "Ok, bye. Just for now!"
+        print(f'You entered quit and end_of_chat:{end_of_chat}')
+        end_of_chat +=1
+        return ''
 
     user = '<|user|> {}'.format(input_text)
     context = context + ' ' + user
@@ -354,25 +319,24 @@ def Create_message(message):
     print('\open_spans:\n', open_spans)
 
     # handling images
-
     if venuename:
         result['has_image'] = 'True'
         images = img_handler_obj.get_imgs_url(query=venuename + "in Singapore", num_of_img=5)
         result['image'] = images[0]
         print(images)
 
-    delex_system = '{}'.format(response_text)
+    delex_system = '<|system|> {}'.format(response_text)
     context = context + ' ' + delex_system
 
     turn += 1
     prev_beliefs = beliefs
-
-    result['response']  = response_text
+    result['Generated_belief'] = ' '.join(belief_text)
+    result['response']  = response_text[10:]
     session['result'] = result
     return result
 
 
-      
+
 @app.route('/')
 def index():
     session['state'] = 'start'
@@ -382,13 +346,74 @@ def index():
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
+    global survey_result
     message = request.form['message']
     response_text = Create_message(message)
-
-    
     #print('\nRESPONSE TEXT ', response_text)
-    return jsonify(response_text)
-
-
-
-
+    if end_of_chat ==0:
+        return jsonify(response_text)
+    if end_of_chat ==1:
+        question1 = ' '.join(("Please take a minute and fill out the following survey.<br>",
+                          "Question 1 about Fluency:<br>",
+                          "5: No repetitions at all.<br>",
+                          "4: Only one repetition appeared in the response.<br>",
+                          "3: Two repetitions appeared in the response.<br>",
+                          "2: Three repetitions appeared in the response.<br>",
+                          "1: More than three repetitions appeared in the response.<br>"))
+        r = {'response': question1, 'status': 'off', 'has_image': 'False'}
+        result['response']  = question1
+        response_text = r
+        session['result'] = r
+        return jsonify(response_text)
+    if end_of_chat ==2:
+        survey_result += message
+        question2 = ' '.join((
+                          "Question 2 about Correctness of text response:<br>",
+                          "5: Correct dialogue flow, correct grammar, and provide correct entities.<br>",
+                          "4: Correct dialogue flow, grammar but small mistakes in provided entities.<br>",
+                          "3: Noticeable mistakes in dialogue flow or grammar or provided entities but acceptable.<br>",
+                          "2: Poor dialogue flow, grammar, and providing entities.<br>",
+                          "1: Wrong dialogue flow, grammar, and wrong entities.<br>"))
+        r = {'response': question2, 'status': 'off', 'has_image': 'False'}
+        result['response']  = question2
+        response_text = r
+        session['result'] = r
+        return jsonify(response_text)
+    if end_of_chat ==3:
+        survey_result += message
+        question3 = ' '.join((
+                          "Question 3 about Correctness of image response:<br>",
+                          "5: 100% helpful in illustrating the recommendation and in your decision-making.<br>",
+                          "4: 75% helpful in illustrating the recommendation and in your decision-making.<br>",
+                          "3: 50% helpful in illustrating the recommendation and in your decision-making.<br>",
+                          "2: 25% helpful in illustrating the recommendation and in your decision-making.<br>",
+                          "1: 0% helpful in illustrating the recommendation and in your decision-making.<br>"))
+        r = {'response': question3, 'status': 'off', 'has_image': 'False'}
+        result['response']  = question3
+        response_text = r
+        session['result'] = r
+        return jsonify(response_text)
+    if end_of_chat ==4:
+        survey_result += message
+        question4 = ' '.join((
+                          "Question 4 about 4 Humanlikeness:<br>",
+                          "5: The response is 100% like generated by humans.<br>",
+                          "4: The response is 75% like generated by humans.<br>",
+                          "3: The response is 50% like generated by humans.<br>",
+                          "2: The response is 25% like generated by humans.<br>",
+                          "1: The response is 0% like generated by humans.<br>"))
+        r = {'response': question4, 'status': 'off', 'has_image': 'False'}
+        result['response']  = question4
+        response_text = r
+        session['result'] = r
+        return jsonify(response_text)
+    if end_of_chat ==5:
+        survey_result += message
+        logging.warning(f'received feedback in order of the question: {survey_result}')
+        question5 = "We appreciate the time you took to share your feedback.<br>MMTOD CS team."
+        r = {'response': question5, 'status': 'off', 'has_image': 'False'}
+        result['response']  = question5
+        response_text = r
+        session['result'] = r
+        return jsonify(response_text)
+    return ""

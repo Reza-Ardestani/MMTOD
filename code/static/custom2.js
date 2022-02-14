@@ -1,6 +1,6 @@
 function submit_message(message) {
     $.post( "/send_message", {message: message}, handle_response);
-    
+
     function handle_response(data) {
         // append the bot repsonse to the div
         $('.card-body').append(`
@@ -14,7 +14,7 @@ function submit_message(message) {
 				</div>
     		</div>
         `)
-        
+
         if (data.has_image == 'True') {
           // append a row to the table
           $('.card-body').append(`
@@ -28,6 +28,15 @@ function submit_message(message) {
       </div>
       </div>
       `)
+      }
+      if (data.status == 'on') {
+          // append a row to the table
+          $('.problem-table').append(`
+                 <tr>
+                  <th scope="row"> ${data.turn_id}</th>
+                  <td> ${data.Generated_belief}</td>
+                </tr>
+          `)
       }
         // remove the loading indicator
         $( "#loading" ).remove();
@@ -54,7 +63,7 @@ $('#target').on('submit', function(e){
 		</div>
     `)
 
-    // loading 
+    // loading
     $('.card-body').append(`
         <div class="d-flex justify-content-start mb-4"  id="loading">
     		<div class="img_cont_msg">
@@ -67,13 +76,9 @@ $('#target').on('submit', function(e){
     	</div>
     `)
 
-    // clear the text input 
+    // clear the text input
     $('#input_message').val('')
 
     // send the message
     submit_message(input_message)
 });
-
-
-
-
