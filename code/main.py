@@ -206,6 +206,7 @@ def Create_message(message):
     result = session['result']
     result['turn_id'] = str(turn)
     result['Generated_belief'] = ''
+    result['Generated_action'] = ''
     result['response'] = ''
     result['status'] = 'on'
     result['has_image'] = 'False'
@@ -331,6 +332,7 @@ def Create_message(message):
     turn += 1
     prev_beliefs = beliefs
     result['Generated_belief'] = ' '.join(belief_text)
+    result['Generated_action'] = ' '.join(action_text)
     result['response']  = response_text[10:]
     session['result'] = result
     return result

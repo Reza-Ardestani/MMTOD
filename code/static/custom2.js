@@ -35,6 +35,7 @@ function submit_message(message) {
                  <tr>
                   <th scope="row"> ${data.turn_id}</th>
                   <td> ${data.Generated_belief}</td>
+                  <td> ${data.Generated_action}</td>
                 </tr>
           `)
       }
